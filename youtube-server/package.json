@@ -1,0 +1,32 @@
+{
+  "name": "youtube-server",
+  "version": "0.1.0",
+  "description": "An MCP youtube player",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "youtube-server": "./build/index.js"
+  },
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "prepare": "npm run build",
+    "watch": "tsc --watch",
+    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "dependencies": {
+    "googleapis": "^144.0.0",
+    "playwright": "^1.49.1"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.3",
+    "@types/bun": "^1.1.14",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3"
+  }
+}
