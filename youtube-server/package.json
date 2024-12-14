@@ -19,7 +19,6 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "googleapis": "^144.0.0",
     "playwright": "^1.49.1"
   },
   "devDependencies": {
