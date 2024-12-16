@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "bun",
+      "request": "attach",
+      "name": "Debug with Bun",
+      "url": "ws://localhost:6565/youtube-server"
+    }
+  ]
+}

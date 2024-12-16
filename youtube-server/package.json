@@ -11,10 +11,7 @@
     "build"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
-    "prepare": "npm run build",
-    "watch": "tsc --watch",
-    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
+    "dev": "bunx @modelcontextprotocol/inspector bun --inspect=localhost:6565/youtube-server --hot src/index.ts",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },

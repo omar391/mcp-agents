@@ -1,4 +1,4 @@
-import { YouTubeServer } from './index.js';
+import { YouTubeServer } from './index.ts';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { chromium, Browser } from 'playwright';
 
@@ -7,7 +7,7 @@ describe('YouTubeServer', () => {
   let browser: Browser;
 
   beforeAll(async () => {
-    browser = await chromium.launch({ headless: false });
+    browser = await chromium.launch({ headless: true });
   });
 
   afterAll(async () => {

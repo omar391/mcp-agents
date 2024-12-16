@@ -10,10 +10,10 @@ import {
 import { chromium, Page, Browser } from 'playwright';
 
 export class YouTubeServer {
-  private server: Server;
+  private readonly server: Server;
   private browser: Browser | null = null;
   private page: Page | null = null;
-  private isTestMode: boolean;
+  private readonly isTestMode: boolean;
 
   constructor(testBrowser?: Browser) {
     this.isTestMode = !!testBrowser;
@@ -45,7 +45,9 @@ export class YouTubeServer {
 
   private async initBrowser() {
     if (!this.browser && !this.isTestMode) {
-      this.browser = await chromium.launch({ headless: false });
+      this.browser = await chromium.launch({
+        headless: false,
+      });
     }
     if (!this.page && this.browser) {
       this.page = await this.browser.newPage();
@@ -92,8 +94,22 @@ export class YouTubeServer {
     });
   }
 
+  private async handleConsentDialog(page: Page) {
+    try {
+      // Try to find and click the "Accept all" button in the consent dialog
+      const acceptButton = await page.$('button[aria-label="Accept all"]');
+      if (acceptButton) {
+        await acceptButton.click();
+        await page.waitForTimeout(1000); // Wait for dialog to disappear
+      }
+    } catch (error) {
+      console.log('No consent dialog found or already accepted');
+    }
+  }
+
   // Public method to handle requests for both MCP server and testing
   async handleRequest(request: any) {
+    console.log('Handling request:', request);
     await this.initBrowser();
     if (!this.page) {
       throw new Error('Browser not initialized');
@@ -102,6 +118,10 @@ export class YouTubeServer {
     switch (request.params.name) {
       case 'search_youtube':
         try {
+          console.log(
+            'Searching YouTube with arguments:',
+            request.params.arguments
+          );
           if (
             !request.params.arguments ||
             typeof request.params.arguments !== 'object' ||
@@ -111,7 +131,9 @@ export class YouTubeServer {
             throw new Error('Invalid arguments: query must be a string');
           }
           const { query } = request.params.arguments;
-          
+
+          await this.handleConsentDialog(this.page);
+
           // Clear the search input and type the new query
           await this.page.click('input[name="search_query"]');
           await this.page.fill('input[name="search_query"]', '');
@@ -119,8 +141,10 @@ export class YouTubeServer {
           await this.page.press('input[name="search_query"]', 'Enter');
 
           // Wait for search results to appear
-          await this.page.waitForSelector('ytd-video-renderer', { timeout: 10000 });
-          
+          await this.page.waitForSelector('ytd-video-renderer', {
+            timeout: 10000,
+          });
+
           // Give a short delay for all results to load
           await this.page.waitForTimeout(2000);
 
@@ -149,6 +173,7 @@ export class YouTubeServer {
             return results;
           });
 
+          console.log('Search results:', searchResults);
           if (searchResults.length === 0) {
             throw new Error('No search results found');
           }
@@ -162,6 +187,7 @@ export class YouTubeServer {
             ],
           };
         } catch (error) {
+          console.error('Error searching YouTube:', error);
           return {
             content: [
               {
@@ -174,6 +200,10 @@ export class YouTubeServer {
         }
       case 'play_youtube':
         try {
+          console.log(
+            'Playing YouTube video with arguments:',
+            request.params.arguments
+          );
           if (
             !request.params.arguments ||
             typeof request.params.arguments !== 'object' ||
@@ -183,20 +213,48 @@ export class YouTubeServer {
             throw new Error('Invalid arguments: videoId must be a string');
           }
           const { videoId } = request.params.arguments;
-          await this.page.goto(`https://www.youtube.com/watch?v=${videoId}`);
-          
-          // Wait for video player to load
-          await this.page.waitForSelector('video', { timeout: 10000 });
-          
+          const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+          await this.page.goto(videoUrl);
+
+          await this.handleConsentDialog(this.page);
+
+          // Wait for video player to be present
+          await this.page.waitForSelector('#movie_player', {
+            timeout: 10000,
+            state: 'visible'
+          });
+
+          // Try to start playback by clicking the video player
+          try {
+            await this.page.click('#movie_player');
+          } catch (error) {
+            console.log('Could not click player, video may already be playing');
+          }
+
+          // Get the video title if available, but don't fail if we can't
+          let title = '';
+          try {
+            const titleElement = await this.page.$('h1.ytd-video-primary-info-renderer');
+            if (titleElement) {
+              title = (await titleElement.textContent())?.trim() ?? '';
+            }
+          } catch (error) {
+            console.log('Could not get video title, but video is playing');
+          }
+
+          console.log('Video playback started');
           return {
             content: [
               {
                 type: 'text',
-                text: `Now playing video: ${videoId}`,
+                text: title 
+                  ? `Now playing video: ${title} (${videoUrl})`
+                  : `Now playing video: ${videoUrl}`,
               },
             ],
           };
         } catch (error) {
+          console.error('Error playing YouTube video:', error);
           return {
             content: [
               {
