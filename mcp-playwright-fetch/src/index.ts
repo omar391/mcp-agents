@@ -17,7 +17,7 @@ export class PlaywrightRendererServer {
     if (initServer) {
       this.server = new Server(
         {
-          name: 'playwright-renderer',
+          name: 'mcp-playwright-fetch',
           version: '0.1.0',
         },
         {
@@ -156,11 +156,11 @@ export class PlaywrightRendererServer {
       throw new McpError(ErrorCode.InvalidParams, "Invalid arguments for render_json");
     }
     const $ = cheerio.load(args.html);
-    
+
     function elementToJson(element: cheerio.Cheerio<any>): any {
       const node = element[0];
       if (!node) return null;
-      
+
       const result: any = {
         tag: node.name.toLowerCase(),
       };

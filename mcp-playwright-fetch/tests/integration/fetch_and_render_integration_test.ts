@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PlaywrightRendererServer } from '../../src/src/index'; // Adjust the import path as needed
+import { PlaywrightRendererServer } from '../../src/index'; // Adjust the import path as needed
 
 describe('Integration Test: Fetch and Render', () => {
   it('should fetch and render a webpage to Markdown', async () => {

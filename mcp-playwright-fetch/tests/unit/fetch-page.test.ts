@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { PlaywrightRendererServer } from '../../src/src/index.js';
+import { PlaywrightRendererServer } from '../../src/index.js';
 // import { chromium } from 'playwright';
 
 describe('PlaywrightRendererServer - fetchPage', () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import type { CheerioAPI, Cheerio } from 'cheerio';
-import { PlaywrightRendererServer } from '../../src/src/index.js';
+import { PlaywrightRendererServer } from '../../src/index.js';
 import * as cheerio from 'cheerio';
 
 describe('PlaywrightRendererServer - renderJson', () => {
