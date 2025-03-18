@@ -1,0 +1,6 @@
+.DS_Store
+node_modules/
+bun.lock
+mcp-playwright-fetch/docs/ai_kb/
+mcp-playwright-fetch/.clinerules
+mcp-playwright-fetch/.github/copilot-instructions.md
