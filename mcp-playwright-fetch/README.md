@@ -1,6 +1,6 @@
 # mcp-playwright-fetch
 
-[![npm version](https://badge.fury.io/js/mcp-playwright-fetch.svg)](https://www.npmjs.com/package/mcp-playwright-fetch)
+[![npm version](https://badge.fury.io/js/@omar391/mcp-playwright-fetch.svg)](https://www.npmjs.com/package/@omar391/mcp-playwright-fetch)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A Model Context Protocol (MCP) server that uses Playwright to fetch and render web pages to Markdown or JSON. This package provides a reliable way to:
@@ -24,17 +24,17 @@ A Model Context Protocol (MCP) server that uses Playwright to fetch and render w
 
 Using bun:
 ```bash
-bun add mcp-playwright-fetch
+bun add @omar391/mcp-playwright-fetch
 ```
 
 Using npm:
 ```bash
-npm install mcp-playwright-fetch
+npm install @omar391/mcp-playwright-fetch
 ```
 
 Using yarn:
 ```bash
-yarn add mcp-playwright-fetch
+yarn add @omar391/mcp-playwright-fetch
 ```
 
 ## Usage
@@ -42,7 +42,7 @@ yarn add mcp-playwright-fetch
 ### Basic Page Fetching
 
 ```typescript
-import { PlaywrightRendererServer } from 'mcp-playwright-fetch';
+import { PlaywrightRendererServer } from '@omar391/mcp-playwright-fetch';
 
 const server = new PlaywrightRendererServer();
 
@@ -95,7 +95,7 @@ To use this package as an MCP server, add the following configuration to your MC
     "command": "bunx",  // Or npx, pnpx etc
     "args": [
       "-y",
-      "mcp-playwright-fetch"
+      "@omar391/mcp-playwright-fetch"
     ]
   }
 }

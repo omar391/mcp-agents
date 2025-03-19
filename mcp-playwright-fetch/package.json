@@ -1,14 +1,14 @@
 {
-  "name": "mcp-playwright-fetch",
-  "version": "1.1.1",
+  "name": "@omar391/mcp-playwright-fetch",
+  "version": "1.1.9",
   "description": "A Model Context Protocol (MCP) server that uses Playwright to fetch and render web pages to Markdown or JSON.",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./build/index.d.ts",
+      "import": "./build/index.js"
     }
   },
   "engines": {
@@ -16,8 +16,8 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist coverage",
+    "build": "tsc --declaration && echo '#!/usr/bin/env node' > build/shebang.tmp && cat build/shebang.tmp build/index.js > build/index.js.tmp && mv build/index.js.tmp build/index.js && rm build/shebang.tmp",
+    "clean": "rm -rf build coverage",
     "dev": "bunx @modelcontextprotocol/inspector bun --inspect=localhost:6565/playwright-fetch --hot src/index.ts",
     "lint": "tsc --noEmit",
     "prepare": "bun run build && bun playwright install chromium",
@@ -25,7 +25,8 @@
     "test:watch": "bun test --watch",
     "publish:patch": "bun run lint && bun run test && npm version patch && npm publish",
     "publish:minor": "bun run lint && bun run test && npm version minor && npm publish",
-    "publish:major": "bun run lint && bun run test && npm version major && npm publish"
+    "publish:major": "bun run lint && bun run test && npm version major && npm publish",
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.7.0",
@@ -51,8 +52,7 @@
   "author": "omar391",
   "license": "Apache-2.0",
   "files": [
-    "dist",
-    "src",
+    "build",
     "README.md",
     "LICENSE"
   ],
@@ -65,5 +65,8 @@
   },
   "bugs": {
     "url": "https://github.com/omar391/mcp-agents/issues"
+  },
+  "bin": {
+    "mcp-playwright-fetch": "build/index.js"
   }
 }
