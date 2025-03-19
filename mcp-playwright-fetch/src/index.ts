@@ -9,6 +9,7 @@ import {
 import { chromium } from 'playwright';
 import htmlToMd from 'html-to-md';
 import * as cheerio from 'cheerio';
+import { logger } from './utils/logger.js';
 
 export class PlaywrightRendererServer {
   private server?: Server;
@@ -121,33 +122,33 @@ export class PlaywrightRendererServer {
       throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments for fetch_page');
     }
 
-    console.log('Debug - fetchPage starting for URL:', args.url);
+    logger.debug('fetchPage starting for URL:', args.url);
     const browser = await chromium.launch();
-    console.log('Debug - Browser launched');
+    logger.debug('Browser launched');
     const context = await browser.newContext();
     const page = await context.newPage();
 
     // Add console logging from the browser
     page.on('console', msg => {
-      console.log('Browser console:', msg.text());
+      logger.debug('Browser console:', msg.text());
     });
 
     // Add request/response logging
     page.on('request', request => {
-      console.log('Browser request:', request.url());
+      logger.debug('Browser request:', request.url());
     });
     page.on('response', response => {
-      console.log('Browser response:', response.url(), response.status());
+      logger.debug('Browser response:', response.url(), response.status());
     });
 
     try {
-      console.log('Debug - Navigating to URL');
+      logger.debug('Navigating to URL');
       await page.goto(args.url, { timeout: 60000 });
-      console.log('Debug - Waiting for network idle');
+      logger.debug('Waiting for network idle');
       await page.waitForLoadState('networkidle');
-      console.log('Debug - Getting page content');
+      logger.debug('Getting page content');
       const html = await page.content();
-      console.log('Debug - Got HTML length:', html.length);
+      logger.debug('Got HTML length:', html.length);
       return {
         content: [
           {
@@ -157,7 +158,7 @@ export class PlaywrightRendererServer {
         ],
       };
     } catch (error) {
-      console.error('Navigation error:', error);
+      logger.error('Navigation error:', error);
       throw error;
     } finally {
       await browser.close();
@@ -169,12 +170,12 @@ export class PlaywrightRendererServer {
       throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments for render_markdown: either "html" or "url" must be provided');
     }
 
-    console.log('Debug - renderMarkdown starting');
+    logger.debug('renderMarkdown starting');
     let html: string | undefined = args?.html;
 
     if (args?.url) {
       try {
-        console.log('Debug - Fetching URL for markdown:', args.url);
+        logger.debug('Fetching URL for markdown:', args.url);
         const browser = await chromium.launch();
         const context = await browser.newContext();
         const page = await context.newPage();
@@ -183,14 +184,14 @@ export class PlaywrightRendererServer {
         html = await page.content();
         await browser.close();
       } catch (error) {
-        console.error('Error fetching URL:', error);
+        logger.error('Error fetching URL:', error);
         throw new McpError(ErrorCode.InternalError, `Failed to fetch URL: ${error}`);
       }
     }
 
-    console.log('Debug - Converting HTML to Markdown, HTML length:', html?.length);
+    logger.debug('Converting HTML to Markdown, HTML length:', html?.length);
     const markdown = htmlToMd(html || "");
-    console.log('Debug - Markdown result length:', markdown.length);
+    logger.debug('Markdown result length:', markdown.length);
     return {
       content: [
         {
@@ -206,12 +207,12 @@ export class PlaywrightRendererServer {
       throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments for render_json: either "html" or "url" must be provided');
     }
 
-    console.log('Debug - renderJson starting');
+    logger.debug('renderJson starting');
     let html: string | undefined = args?.html;
 
     if (!html && args?.url) {
       try {
-        console.log('Debug - Fetching URL for JSON:', args.url);
+        logger.debug('Fetching URL for JSON:', args.url);
         const browser = await chromium.launch();
         const context = await browser.newContext();
         const page = await context.newPage();
@@ -220,7 +221,7 @@ export class PlaywrightRendererServer {
         html = await page.content();
         await browser.close();
       } catch (error) {
-        console.error('Error fetching URL:', error);
+        logger.error('Error fetching URL:', error);
         throw new McpError(ErrorCode.InternalError, `Failed to fetch URL: ${error}`);
       }
     }
@@ -229,7 +230,7 @@ export class PlaywrightRendererServer {
       throw new McpError(ErrorCode.InvalidParams, "Invalid arguments for render_json");
     }
 
-    console.log('Debug - Loading HTML into cheerio, HTML length:', html.length);
+    logger.debug('Loading HTML into cheerio, HTML length:', html.length);
     const $ = cheerio.load(html, {
       xml: {
         xmlMode: false,
@@ -240,11 +241,11 @@ export class PlaywrightRendererServer {
     function elementToJson(element: cheerio.Cheerio<any>): any {
       const node = element[0];
       if (!node) {
-        console.log('Debug - No node found in elementToJson');
+        logger.debug('No node found in elementToJson');
         return null;
       }
 
-      console.log('Debug - Processing node:', node.name);
+      logger.debug('Processing node:', node.name);
       const result: any = {
         tag: node.name.toLowerCase(),
       };
@@ -253,7 +254,7 @@ export class PlaywrightRendererServer {
       const attrs = node.attribs;
       if (attrs && Object.keys(attrs).length > 0) {
         result.attributes = attrs;
-        console.log('Debug - Node attributes:', attrs);
+        logger.debug('Node attributes:', attrs);
       }
 
       const children: any[] = [];
@@ -278,7 +279,7 @@ export class PlaywrightRendererServer {
 
       if (children.length > 0) {
         result.children = children;
-        console.log('Debug - Node has children:', children.length);
+        logger.debug('Node has children:', children.length);
       }
 
       return result;
@@ -286,7 +287,7 @@ export class PlaywrightRendererServer {
 
     // Special handling for HTML fragments
     if (!html.trim().toLowerCase().startsWith('<!doctype') && !html.trim().toLowerCase().startsWith('<html')) {
-      console.log('Debug - Processing HTML fragment');
+      logger.debug('Processing HTML fragment');
       const fragment = $.parseHTML(html);
       const elements = fragment.filter(el => el.type === 'tag').map(el => elementToJson($(el))).filter(Boolean);
 
@@ -299,21 +300,21 @@ export class PlaywrightRendererServer {
           }, null, 2)
         }]
       };
-      console.log('Debug - Fragment JSON result:', result.content[0].text);
+      logger.debug('Fragment JSON result:', result.content[0].text);
       return result;
     }
 
     // For full HTML documents
-    console.log('Debug - Processing full HTML document');
+    logger.debug('Processing full HTML document');
 
     // Extract both HTML and BODY elements to create proper structure
     const html_element = $('html');
     const head = $('head');
     const body = $('body');
 
-    console.log('Debug - Found html tag:', html_element.length > 0);
-    console.log('Debug - Found head tag:', head.length > 0);
-    console.log('Debug - Found body tag:', body.length > 0);
+    logger.debug('Found html tag:', html_element.length > 0);
+    logger.debug('Found head tag:', head.length > 0);
+    logger.debug('Found body tag:', body.length > 0);
 
     // Create a proper DOM structure
     const htmlJson = elementToJson(html_element);
@@ -329,7 +330,7 @@ export class PlaywrightRendererServer {
           }, null, 2)
         }]
       };
-      console.log('Debug - Full HTML document JSON result:', result.content[0].text);
+      logger.debug('Full HTML document JSON result:', result.content[0].text);
       return result;
     } else {
       // Fallback to body-only if html element wasn't found or properly parsed
@@ -343,7 +344,7 @@ export class PlaywrightRendererServer {
           }, null, 2)
         }]
       };
-      console.log('Debug - Body-only JSON result:', result.content[0].text);
+      logger.debug('Body-only JSON result:', result.content[0].text);
       return result;
     }
   }
@@ -354,7 +355,7 @@ export class PlaywrightRendererServer {
     }
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('Playwright Renderer MCP server running on stdio');
+    logger.info('Playwright Renderer MCP server running on stdio');
   }
 }
 
