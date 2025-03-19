@@ -4,3 +4,4 @@ bun.lock
 mcp-playwright-fetch/docs/ai_kb/
 mcp-playwright-fetch/.clinerules
 mcp-playwright-fetch/.github/copilot-instructions.md
+mcp-playwright-fetch/build/

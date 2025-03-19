@@ -4,7 +4,7 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'node',
-        include: ['tests/integration/**/*.test.ts'],
+        include: ['tests/integration/**/*_integration_test.ts'],
         setupFiles: ['./vitest.setup.ts'],
         mockReset: false,
         clearMocks: false,
