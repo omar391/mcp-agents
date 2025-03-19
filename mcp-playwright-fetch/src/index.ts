@@ -359,7 +359,5 @@ export class PlaywrightRendererServer {
   }
 }
 
-if (process.argv[1] === import.meta.url) {
-  const server = new PlaywrightRendererServer();
-  server.run().catch(console.error);
-}
+const server = new PlaywrightRendererServer();
+server.run().catch(console.error);
