@@ -1,7 +1,7 @@
 # mcp-playwright-fetch
 
 [![npm version](https://badge.fury.io/js/mcp-playwright-fetch.svg)](https://www.npmjs.com/package/mcp-playwright-fetch)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A Model Context Protocol (MCP) server that uses Playwright to fetch and render web pages to Markdown or JSON. This package provides a reliable way to:
 
@@ -112,7 +112,7 @@ The server provides three main operations:
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/roo/mcp-playwright-fetch.git
+git clone https://github.com/omar391/mcp-playwright-fetch.git
 cd mcp-playwright-fetch
 ```
 
@@ -145,4 +145,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-MIT © Roo
+Apache 2.0 © omar391
