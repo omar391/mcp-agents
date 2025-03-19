@@ -21,17 +21,14 @@ console.log(result.content[0].text);
 ## MCP Server Settings
 
 To use this package as an MCP server, add the following configuration to your MCP settings:
-
 ```json
 {
-  "mcp-playwright-fetch@1.0.0": {
-    "command": "bunx",
+  "mcp-playwright-fetch": {
+    "command": "bunx", # OR npx, pnpx etc
     "args": [
       "-y",
       "mcp-playwright-fetch"
-    ],
-    "disabled": false,
-    "alwaysAllow": []
+    ]
   }
 }
 ```

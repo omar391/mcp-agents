@@ -66,12 +66,16 @@ export class PlaywrightRendererServer {
           inputSchema: {
             type: 'object',
             properties: {
+              url: {
+                type: 'string',
+                description: 'The URL to fetch HTML from.',
+              },
               html: {
                 type: 'string',
                 description: 'The HTML to render.',
               },
             },
-            required: ['html'],
+            required: [],
           },
         },
         {
@@ -80,12 +84,16 @@ export class PlaywrightRendererServer {
           inputSchema: {
             type: 'object',
             properties: {
+              url: {
+                type: 'string',
+                description: 'The URL to fetch HTML from.',
+              },
               html: {
                 type: 'string',
                 description: 'The HTML to render.',
               },
             },
-            required: ['html'],
+            required: [],
           },
         },
       ],
@@ -113,13 +121,33 @@ export class PlaywrightRendererServer {
       throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments for fetch_page');
     }
 
+    console.log('Debug - fetchPage starting for URL:', args.url);
     const browser = await chromium.launch();
+    console.log('Debug - Browser launched');
     const context = await browser.newContext();
     const page = await context.newPage();
+
+    // Add console logging from the browser
+    page.on('console', msg => {
+      console.log('Browser console:', msg.text());
+    });
+
+    // Add request/response logging
+    page.on('request', request => {
+      console.log('Browser request:', request.url());
+    });
+    page.on('response', response => {
+      console.log('Browser response:', response.url(), response.status());
+    });
+
     try {
-      await page.goto(args.url, { timeout: 60000 }); // Increased timeout to 60 seconds
+      console.log('Debug - Navigating to URL');
+      await page.goto(args.url, { timeout: 60000 });
+      console.log('Debug - Waiting for network idle');
       await page.waitForLoadState('networkidle');
+      console.log('Debug - Getting page content');
       const html = await page.content();
+      console.log('Debug - Got HTML length:', html.length);
       return {
         content: [
           {
@@ -136,11 +164,33 @@ export class PlaywrightRendererServer {
     }
   }
 
-  public async renderMarkdown(args: any) {
-    if (!args || typeof args.html !== 'string') {
-      throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments for render_markdown');
+  public async renderMarkdown(args: any): Promise<any> {
+    if (!args?.html && !args?.url) {
+      throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments for render_markdown: either "html" or "url" must be provided');
     }
-    const markdown = htmlToMd(args.html);
+
+    console.log('Debug - renderMarkdown starting');
+    let html: string | undefined = args?.html;
+
+    if (args?.url) {
+      try {
+        console.log('Debug - Fetching URL for markdown:', args.url);
+        const browser = await chromium.launch();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await page.goto(args.url, { timeout: 60000 });
+        await page.waitForLoadState('networkidle');
+        html = await page.content();
+        await browser.close();
+      } catch (error) {
+        console.error('Error fetching URL:', error);
+        throw new McpError(ErrorCode.InternalError, `Failed to fetch URL: ${error}`);
+      }
+    }
+
+    console.log('Debug - Converting HTML to Markdown, HTML length:', html?.length);
+    const markdown = htmlToMd(html || "");
+    console.log('Debug - Markdown result length:', markdown.length);
     return {
       content: [
         {
@@ -151,53 +201,150 @@ export class PlaywrightRendererServer {
     };
   }
 
-  public async renderJson(args: any) {
-    if (!args || typeof args.html !== 'string') {
+  public async renderJson(args: any): Promise<any> {
+    if (!args?.html && !args?.url) {
+      throw new McpError(ErrorCode.InvalidParams, 'Invalid arguments for render_json: either "html" or "url" must be provided');
+    }
+
+    console.log('Debug - renderJson starting');
+    let html: string | undefined = args?.html;
+
+    if (!html && args?.url) {
+      try {
+        console.log('Debug - Fetching URL for JSON:', args.url);
+        const browser = await chromium.launch();
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        await page.goto(args.url, { timeout: 60000 });
+        await page.waitForLoadState('networkidle');
+        html = await page.content();
+        await browser.close();
+      } catch (error) {
+        console.error('Error fetching URL:', error);
+        throw new McpError(ErrorCode.InternalError, `Failed to fetch URL: ${error}`);
+      }
+    }
+
+    if (!html) {
       throw new McpError(ErrorCode.InvalidParams, "Invalid arguments for render_json");
     }
-    const $ = cheerio.load(args.html);
+
+    console.log('Debug - Loading HTML into cheerio, HTML length:', html.length);
+    const $ = cheerio.load(html, {
+      xml: {
+        xmlMode: false,
+        decodeEntities: true
+      }
+    });
 
     function elementToJson(element: cheerio.Cheerio<any>): any {
       const node = element[0];
-      if (!node) return null;
+      if (!node) {
+        console.log('Debug - No node found in elementToJson');
+        return null;
+      }
 
+      console.log('Debug - Processing node:', node.name);
       const result: any = {
         tag: node.name.toLowerCase(),
       };
 
-      if (node.attribs && Object.keys(node.attribs).length > 0) {
-        result.attributes = node.attribs;
+      // Add attributes if they exist
+      const attrs = node.attribs;
+      if (attrs && Object.keys(attrs).length > 0) {
+        result.attributes = attrs;
+        console.log('Debug - Node attributes:', attrs);
       }
 
-      const contents = element.contents();
-      const children = contents && typeof contents.get === 'function' ? contents.get() : [];
+      const children: any[] = [];
 
-      if (children && children.length > 0) {
-        result.children = [];
-        for (const child of children) {
-          const childNode = $(child);
-          if (child.type === "text") {
-            const text = child.data?.trim() || childNode.text().trim();
-            if (text) {
-              result.children.push({
-                type: "text",
-                value: text,
-              });
-            }
-          } else if (child.type === "tag") {
-            result.children.push(elementToJson(childNode));
+      // Process child nodes
+      element.contents().each((_, content) => {
+        if (content.type === 'text') {
+          const text = $(content).text().trim();
+          if (text) {
+            children.push({
+              type: 'text',
+              value: text
+            });
+          }
+        } else if (content.type === 'tag') {
+          const childJson = elementToJson($(content));
+          if (childJson) {
+            children.push(childJson);
           }
         }
+      });
+
+      if (children.length > 0) {
+        result.children = children;
+        console.log('Debug - Node has children:', children.length);
       }
+
       return result;
     }
 
-    const json = elementToJson($(":root"));
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(json, null, 2)
-      }]
+    // Special handling for HTML fragments
+    if (!html.trim().toLowerCase().startsWith('<!doctype') && !html.trim().toLowerCase().startsWith('<html')) {
+      console.log('Debug - Processing HTML fragment');
+      const fragment = $.parseHTML(html);
+      const elements = fragment.filter(el => el.type === 'tag').map(el => elementToJson($(el))).filter(Boolean);
+
+      const result = {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            tag: 'root',
+            children: elements
+          }, null, 2)
+        }]
+      };
+      console.log('Debug - Fragment JSON result:', result.content[0].text);
+      return result;
+    }
+
+    // For full HTML documents
+    console.log('Debug - Processing full HTML document');
+
+    // Extract both HTML and BODY elements to create proper structure
+    const html_element = $('html');
+    const head = $('head');
+    const body = $('body');
+
+    console.log('Debug - Found html tag:', html_element.length > 0);
+    console.log('Debug - Found head tag:', head.length > 0);
+    console.log('Debug - Found body tag:', body.length > 0);
+
+    // Create a proper DOM structure
+    const htmlJson = elementToJson(html_element);
+
+    // If we have a valid HTML structure, use it - otherwise fall back to body only
+    if (htmlJson) {
+      const result = {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            tag: 'root',
+            children: [htmlJson]
+          }, null, 2)
+        }]
+      };
+      console.log('Debug - Full HTML document JSON result:', result.content[0].text);
+      return result;
+    } else {
+      // Fallback to body-only if html element wasn't found or properly parsed
+      const bodyJson = elementToJson(body);
+      const result = {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            tag: 'root',
+            children: [bodyJson]
+          }, null, 2)
+        }]
+      };
+      console.log('Debug - Body-only JSON result:', result.content[0].text);
+      return result;
     }
   }
 

@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "bun src/index.ts",
-    "test": "bun vitest run",
+    "test": "bun test:unit && bun test:integration",
+    "test:unit": "bun vitest run --config vitest.config.ts",
+    "test:integration": "bun vitest run --config vitest.integration.config.ts",
     "test:watch": "bun vitest",
     "test:ui": "bun vitest --ui",
     "test:coverage": "bun vitest run --coverage",

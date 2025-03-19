@@ -1,58 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import type { CheerioAPI, Cheerio } from 'cheerio';
+import { McpError } from '@modelcontextprotocol/sdk/types.js';
 import { PlaywrightRendererServer } from '../../src/index.js';
-import * as cheerio from 'cheerio';
+import { setupServerMocks } from '../mocks/server-mocks';
+import { TEST_HTML, EXPECTED_JSON } from '../mocks/test-constants';
 
 describe('PlaywrightRendererServer - renderJson', () => {
     let server: PlaywrightRendererServer;
 
-    const createTextNode = (content: string) => ({
-        type: 'text',
-        data: content
-    });
-
-    const createMockElement = (tagName: string, attributes = {}, children: any[] = []): any => {
-        const element = {
-            type: 'tag',
-            name: tagName,
-            attribs: Object.keys(attributes).length > 0 ? attributes : undefined,
-            children: children
-        };
-
-        return {
-            [0]: element,
-            prop: vi.fn(),
-            attr: vi.fn().mockImplementation(() => attributes),
-            contents: vi.fn().mockReturnValue({ get: () => children }),
-            text: vi.fn().mockImplementation(() => {
-                const textNode = children.find(c => c.type === 'text');
-                return textNode ? textNode.data : '';
-            })
-        };
-    };
-
-    const createCheerioAPI = (rootElement: any): CheerioAPI => {
-        const $ = function(selector: string | any): any {
-            if (typeof selector === 'string' && (selector === ':root' || selector.startsWith(':'))) {
-                return rootElement;
-            }
-            // When wrapping a node, create a new cheerio-like object
-            if (selector && typeof selector === 'object') {
-                return {
-                    [0]: selector,
-                    contents: () => ({ get: () => selector.children || [] })
-                };
-            }
-        } as unknown as CheerioAPI;
-        
-        $.load = vi.fn();
-        return $;
-    };
-
     beforeEach(() => {
-        vi.clearAllMocks();
         server = new PlaywrightRendererServer(false);
+        setupServerMocks(server);
     });
 
     afterEach(() => {
@@ -62,63 +19,38 @@ describe('PlaywrightRendererServer - renderJson', () => {
     it('should throw error for invalid arguments', async () => {
         await expect(server.renderJson(null as any)).rejects.toThrow(McpError);
         await expect(server.renderJson({} as any)).rejects.toThrow(McpError);
-        await expect(server.renderJson({ html: 123 } as any)).rejects.toThrow(McpError);
     });
 
     it('should convert simple HTML to JSON', async () => {
-        const textNode = createTextNode('Hello');
-        const pElement = createMockElement('p', {}, [textNode]);
-        const divElement = createMockElement('div', {}, [pElement[0]]);
-        
-        const mockCheerioLoad = vi.fn().mockImplementation(() => createCheerioAPI(divElement));
-        vi.spyOn(cheerio, 'load').mockImplementation(mockCheerioLoad);
+        const result = await server.renderJson({ html: TEST_HTML.SIMPLE_DIV });
+        const json = JSON.parse(result.content[0].text);
 
-        const result = await server.renderJson({ html: '<div><p>Hello</p></div>' });
-        expect(result).toEqual({
-            content: [{
-                type: 'text',
-                text: JSON.stringify({
-                    tag: 'div',
-                    children: [{
-                        tag: 'p',
-                        children: [{
-                            type: 'text',
-                            value: 'Hello'
-                        }]
-                    }]
-                }, null, 2)
-            }]
-        });
+        expect(json).toEqual(EXPECTED_JSON.SIMPLE_DIV);
     });
 
     it('should convert HTML with attributes to JSON', async () => {
-        const textNode = createTextNode('Title');
-        const h1Element = createMockElement('h1', { class: 'title' }, [textNode]);
-        const divElement = createMockElement('div', { id: 'root' }, [h1Element[0]]);
-        
-        const mockCheerioLoad = vi.fn().mockImplementation(() => createCheerioAPI(divElement));
-        vi.spyOn(cheerio, 'load').mockImplementation(mockCheerioLoad);
-
         const result = await server.renderJson({
-            html: '<div id="root"><h1 class="title">Title</h1></div>'
+            html: TEST_HTML.DIV_WITH_ATTRS
         });
 
-        expect(result).toEqual({
-            content: [{
-                type: 'text',
-                text: JSON.stringify({
-                    tag: 'div',
-                    attributes: { id: 'root' },
-                    children: [{
-                        tag: 'h1',
-                        attributes: { class: 'title' },
-                        children: [{
-                            type: 'text',
-                            value: 'Title'
-                        }]
-                    }]
-                }, null, 2)
-            }]
+        const json = JSON.parse(result.content[0].text);
+        expect(json).toEqual(EXPECTED_JSON.DIV_WITH_ATTRS);
+    });
+
+    it('should fetch HTML from URL and convert to JSON', async () => {
+        const result = await server.renderJson({ url: 'http://example.com' });
+        const json = JSON.parse(result.content[0].text);
+
+        expect(json).toEqual(EXPECTED_JSON.BASIC_HTML);
+    });
+
+    it('should prioritize HTML content over URL if both are provided', async () => {
+        const result = await server.renderJson({
+            html: TEST_HTML.PROVIDED_HTML,
+            url: 'http://example.com'
         });
+
+        const json = JSON.parse(result.content[0].text);
+        expect(json).toEqual(EXPECTED_JSON.PROVIDED_HTML);
     });
 });

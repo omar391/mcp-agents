@@ -1,41 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { McpError } from '@modelcontextprotocol/sdk/types.js';
 import { PlaywrightRendererServer } from '../../src/index.js';
-// import { chromium } from 'playwright';
+import { setupServerMocks } from '../mocks/server-mocks';
+import { TEST_HTML } from '../mocks/test-constants';
 
 describe('PlaywrightRendererServer - fetchPage', () => {
     let server: PlaywrightRendererServer;
-    // let mockPage: any;
-    // let mockContext: any;
-    // let mockBrowser: any;
 
     beforeEach(() => {
-        // vi.clearAllMocks();
-
-        // // Setup mock page, context and browser
-        // mockPage = {
-        //     goto: vi.fn().mockResolvedValue(undefined),
-        //     waitForLoadState: vi.fn().mockResolvedValue(undefined),
-        //     content: vi.fn().mockResolvedValue('<html><body><h1>Test Page</h1></body></html>')
-        // };
-
-        // mockContext = {
-        //     newPage: vi.fn().mockResolvedValue(mockPage)
-        // };
-
-        // mockBrowser = {
-        //     newContext: vi.fn().mockResolvedValue(mockContext),
-        //     close: vi.fn().mockResolvedValue(undefined)
-        // };
-
-    //  vi.spyOn(chromium, 'launch').mockResolvedValue(mockBrowser as any);
-
-        // Create a new server instance
         server = new PlaywrightRendererServer(false);
+        setupServerMocks(server);
     });
 
     afterEach(() => {
-        // vi.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     it('should throw error for invalid arguments', async () => {
@@ -47,18 +25,7 @@ describe('PlaywrightRendererServer - fetchPage', () => {
     it('should fetch a webpage and return the HTML content', async () => {
         const result = await server.fetchPage({ url: 'https://example.com' });
 
-        // // Verify Playwright API is called correctly
-        // expect(chromium.launch).toHaveBeenCalled();
-        // expect(mockBrowser.newContext).toHaveBeenCalled();
-        // expect(mockContext.newPage).toHaveBeenCalled();
-        // expect(mockPage.goto).toHaveBeenCalledWith('https://example.com');
-        // expect(mockPage.waitForLoadState).toHaveBeenCalledWith('networkidle');
-        // expect(mockPage.content).toHaveBeenCalled();
-
-        // // Verify browser is closed
-        // expect(mockBrowser.close).toHaveBeenCalled();
-
-        // Verify correct result is returned
-        expect(result.content[0].text).toContain('Example Domain');
+        expect(result.content[0].type).toBe('text');
+        expect(result.content[0].text).toBe(TEST_HTML.BASIC);
     });
 });
